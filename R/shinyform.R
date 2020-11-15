@@ -225,15 +225,25 @@ formUI <- function(formInfo) {
               if (question$type != "checkbox" && question$type != "select") {
                 tags$label(
                   `for` = ns(question$id),
-                  class = "sf-input-label",
+                  class = "sf-input-label", 
                   label,
                   if (!is.null(question$hint)) {
                     div(class = "question-hint", question$hint)
                   }
                 )
               },
-              input
+              
+              if(!is.null(question$condition)) {
+                
+                conditionalPanel(condition = question$condition,
+                                 ns =ns,
+                                 input) 
+                
+              }
+              
+              else input
             )
+            
           }
         )
       ),
@@ -351,7 +361,7 @@ formServerHelper <- function(input, output, session, formInfo) {
   
   questions <- formInfo$questions
   
-  fieldsMandatory <- Filter(function(x) {!is.null(x$mandatory) && x$mandatory }, questions)
+  fieldsMandatory <- Filter(function(x) {!is.null(x$mandatory) && x$mandatory && (is.null(x$condition) || x$condition == TRUE)}, questions)
   fieldsMandatory <- unlist(lapply(fieldsMandatory, function(x) { x$id }))
   fieldsAll <- unlist(lapply(questions, function(x) { x$id }))
   
