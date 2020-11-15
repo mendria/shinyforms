@@ -147,7 +147,8 @@ loadDataGsheets <- function() {
 #'   list(id = "name", type = "text", title = "Name", mandatory = TRUE),
 #'   list(id = "age", type = "numeric", title = "Age"),
 #'   list(id = "favourite_pkg", type = "text", title = "Favourite R package"),
-#'   list(id = "terms", type = "checkbox", title = "I agree to the terms")
+#'   list(id = "terms", type = "checkbox", title = "I agree to the terms"),
+#'   list(id = "os_type", type = "select", title = "Operating system used most frequently", choices = ("",  "Windows", "Mac", "Linux"))
 #' )
 #' formInfo <- list( 
 #' id = "basicinfo",
@@ -215,11 +216,13 @@ formUI <- function(formInfo) {
               input <- numericInput(ns(question$id), NULL, 0)
             } else if (question$type == "checkbox") {
               input <- checkboxInput(ns(question$id), label, FALSE)
+            } else if(question$type == "select") {
+              input <- selectInput(ns(question$id), label, choices = question$choices)
             }
 
             div(
               class = "sf-question",
-              if (question$type != "checkbox") {
+              if (question$type != "checkbox" && question$type != "select") {
                 tags$label(
                   `for` = ns(question$id),
                   class = "sf-input-label",
