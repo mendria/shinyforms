@@ -180,7 +180,7 @@ formUI <- function(formInfo) {
   
   questions <- formInfo$questions
   
-  fieldsMandatory <- Filter(function(x) {!is.null(x$mandatory) && x$mandatory}, questions)
+  fieldsMandatory <- Filter(function(x) { !is.null(x$mandatory) && x$mandatory }, questions)
   fieldsMandatory <- unlist(lapply(fieldsMandatory, function(x) { x$id }))
   
   titleElement <- NULL
@@ -375,9 +375,28 @@ formServerHelper <- function(input, output, session, formInfo) {
   
 
   
-  fieldsMandatory <- Filter(function(x) {!is.null(x$mandatory) && x$mandatory}, questions)
+  fieldsMandatory <- Filter(function(x) {!is.null(x$mandatory) && x$mandatory }, questions)
   fieldsMandatory <- unlist(lapply(fieldsMandatory, function(x) { x$id }))
-  fieldsAll <- unlist(lapply(questions, function(x) { x$id }))
+  fieldsAll <- unlist(lapply(questions, function(x) { x$id })) 
+
+  
+  
+  # fieldsMandatory <- reactive({
+  #   Filter(function(x) {!is.null(x$mandatory) && x$mandatory}, questions)
+  # })
+  # 
+  # 
+  # fieldsMandatory <- reactive({
+  #   Filter(function(x) {!is.null(x$condition) && x$condition == TRUE}, fieldsMandatory)
+  #   
+  #   unlist(lapply(fieldsMandatory, function(x) { x$id }))
+  #   
+  #   
+  # })
+  # 
+  # 
+  # fieldsAll <- unlist(lapply(questions, function(x) { x$id }))
+  
   
 ### MAking fieldsMandatory a reactive and then use in observe doesn't work  
   
@@ -390,9 +409,6 @@ formServerHelper <- function(input, output, session, formInfo) {
   
   
   observe({
- 
-    # fieldsMandatory <- fieldsMandatory()
-    
     mandatoryFilled <-
       mapply(fieldsMandatory,
              function(x) {
