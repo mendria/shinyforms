@@ -377,27 +377,28 @@ formServerHelper <- function(input, output, session, formInfo) {
   
   fieldsMandatory <- Filter(function(x) {!is.null(x$mandatory) && x$mandatory }, questions)
   fieldsMandatory <- unlist(lapply(fieldsMandatory, function(x) { x$id }))
-  fieldsAll <- unlist(lapply(questions, function(x) { x$id })) 
+  fieldsAll <- unlist(lapply(questions, function(x) { x$id }))
 
   
-  
   # fieldsMandatory <- reactive({
-  #   Filter(function(x) {!is.null(x$mandatory) && x$mandatory}, questions)
-  # })
-  # 
-  # 
-  # fieldsMandatory <- reactive({
-  #   Filter(function(x) {!is.null(x$condition) && x$condition == TRUE}, fieldsMandatory)
-  #   
-  #   unlist(lapply(fieldsMandatory, function(x) { x$id }))
-  #   
+  #   mandatory <- Filter(function(x) {!is.null(x$mandatory) && x$mandatory}, questions)
+  #   fieldsMandatory_l <- Filter(function(x) {is.null(x$condition) | as.name(str_replace(x$condition, "[.]", "$")) == TRUE}, mandatory)
+  #   fieldsMandatory_l
+  #   fieldsMandatory <- sapply(fieldsMandatory_l, function(x) { x$id })
+  #   fieldsMandatory
   #   
   # })
-  # 
-  # 
-  # fieldsAll <- unlist(lapply(questions, function(x) { x$id }))
+
+  print("makes mandatory fields")
+
+  # fieldsMandatory <- reactive({
+  #   fieldsMandatory <- sapply(fieldsMandatory_l, function(x) { x$id })
+  #   fieldsMandatory
+  # })
+
+  fieldsAll <- unlist(lapply(questions, function(x) { x$id }))
   
-  
+ 
 ### MAking fieldsMandatory a reactive and then use in observe doesn't work  
   
   # fieldsMandatory <- reactive({
@@ -410,7 +411,7 @@ formServerHelper <- function(input, output, session, formInfo) {
   
   observe({
     mandatoryFilled <-
-      mapply(fieldsMandatory,
+      vapply(fieldsMandatory,
              function(x) {
                !is.null(input[[x]]) && input[[x]] != ""
              },
@@ -420,10 +421,13 @@ formServerHelper <- function(input, output, session, formInfo) {
     shinyjs::toggleState(id = "submit", condition = mandatoryFilled)
   })
   
+  print("Observes mandatory fields")
+  
   observeEvent(input$reset, {
     shinyjs::reset("form")
     shinyjs::hide("error")
   })
+  
   
   # When the Submit button is clicked, submit the response
   observeEvent(input$submit, {
@@ -458,6 +462,8 @@ formServerHelper <- function(input, output, session, formInfo) {
         return()
       }
     }
+    
+    print("Observes submit input")
     
     # Save the data (show an error message in case of error)
     tryCatch({
