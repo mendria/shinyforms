@@ -345,8 +345,6 @@ formServer <- function(formInfo) {
 }
 
 
-
-
 # Helper function for formServer component
 formServerHelper <- function(input, output, session, formInfo) {
   if (grepl("\\s", formInfo$id)) {
@@ -361,54 +359,20 @@ formServerHelper <- function(input, output, session, formInfo) {
   
   questions <- formInfo$questions
   
-  # observeEvent(questions$condition, {
-  #    
-  #   if(is.null(x$condition) || x$condition == TRUE) {
-  #     
-  #     fieldsMandatory <- Filter(function(x) {!is.null(x$mandatory) && x$mandatory}, questions)
-  #     fieldsMandatory <- unlist(lapply(fieldsMandatory, function(x) { x$id }))
-  #     fieldsAll <- unlist(lapply(questions, function(x) { x$id }))
-  #     
-  #   }
-  #   
-  # })
-  
-
-  
-  # fieldsMandatory <- Filter(function(x) {!is.null(x$mandatory) && x$mandatory }, questions)
-  # fieldsMandatory <- unlist(lapply(fieldsMandatory, function(x) { x$id }))
-  # fieldsAll <- unlist(lapply(questions, function(x) { x$id }))
-
+## This reactive makes sure that mandatory conditional fields are only mandatory if their condition is true
   
   fieldsMandatory <- reactive({
-    mandatory <- Filter(function(x) {!is.null(x$mandatory) && x$mandatory}, questions)
-    fieldsMandatory_l <- Filter(function(x) {is.null(x$condition) | (!is.null(x$condition) && eval(parse(text = str_replace(x$condition, "[.]", "$"))))}, mandatory)   ##eval (str_replace(x$condition, "[.]", "$"))
-    fieldsMandatory_l
-    fieldsMandatory <- sapply(fieldsMandatory_l, function(x) { x$id })
+    fieldsMandatory <- Filter(function(x) {!is.null(x$mandatory) && x$mandatory}, questions)
+    fieldsMandatory <- Filter(function(x) {is.null(x$condition) | (!is.null(x$condition) && eval(parse(text = str_replace(x$condition, "[.]", "$"))))}, fieldsMandatory)   
+    fieldsMandatory <- sapply(fieldsMandatory, function(x) { x$id })
     fieldsMandatory
 
   })
 
-  print("makes mandatory fields")
-
-  # fieldsMandatory <- reactive({
-  #   fieldsMandatory <- sapply(fieldsMandatory_l, function(x) { x$id })
-  #   fieldsMandatory
-  # })
-
   fieldsAll <- unlist(lapply(questions, function(x) { x$id }))
   
+  print("Creates reactive vector of mandatory fields")
  
-### MAking fieldsMandatory a reactive and then use in observe doesn't work  
-  
-  # fieldsMandatory <- reactive({
-  # 
-  #   fieldsMandatory <- Filter(function(x) {!is.null(x$mandatory) && x$mandatory}, questions)
-  #   fieldsMandatory <- unlist(lapply(fieldsMandatory, function(x) { x$id }))
-  #   
-  # })
-  
-  
   observe({
     mandatoryFilled <-
       vapply(fieldsMandatory(),
