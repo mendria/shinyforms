@@ -225,15 +225,25 @@ formUI <- function(formInfo) {
               if (question$type != "checkbox" && question$type != "select") {
                 tags$label(
                   `for` = ns(question$id),
-                  class = "sf-input-label",
+                  class = "sf-input-label", 
                   label,
                   if (!is.null(question$hint)) {
                     div(class = "question-hint", question$hint)
                   }
                 )
               },
-              input
+              
+              if(!is.null(question$condition)) {
+                
+                conditionalPanel(condition = question$condition,
+                                 ns =ns,
+                                 input) 
+                
+              }
+              
+              else input
             )
+            
           }
         )
       ),
@@ -335,8 +345,6 @@ formServer <- function(formInfo) {
 }
 
 
-
-
 # Helper function for formServer component
 formServerHelper <- function(input, output, session, formInfo) {
   if (grepl("\\s", formInfo$id)) {
@@ -351,13 +359,23 @@ formServerHelper <- function(input, output, session, formInfo) {
   
   questions <- formInfo$questions
   
-  fieldsMandatory <- Filter(function(x) {!is.null(x$mandatory) && x$mandatory }, questions)
-  fieldsMandatory <- unlist(lapply(fieldsMandatory, function(x) { x$id }))
+## This reactive makes sure that mandatory conditional fields are only mandatory if their condition is true
+  
+  fieldsMandatory <- reactive({
+    fieldsMandatory <- Filter(function(x) {!is.null(x$mandatory) && x$mandatory}, questions)
+    fieldsMandatory <- Filter(function(x) {is.null(x$condition) | (!is.null(x$condition) && eval(parse(text = str_replace(x$condition, "[.]", "$"))))}, fieldsMandatory)   
+    fieldsMandatory <- sapply(fieldsMandatory, function(x) { x$id })
+    fieldsMandatory
+
+  })
+
   fieldsAll <- unlist(lapply(questions, function(x) { x$id }))
   
+  print("Creates reactive vector of mandatory fields")
+ 
   observe({
     mandatoryFilled <-
-      vapply(fieldsMandatory,
+      vapply(fieldsMandatory(),
              function(x) {
                !is.null(input[[x]]) && input[[x]] != ""
              },
@@ -367,10 +385,13 @@ formServerHelper <- function(input, output, session, formInfo) {
     shinyjs::toggleState(id = "submit", condition = mandatoryFilled)
   })
   
+  print("Observes mandatory fields")
+  
   observeEvent(input$reset, {
     shinyjs::reset("form")
     shinyjs::hide("error")
   })
+  
   
   # When the Submit button is clicked, submit the response
   observeEvent(input$submit, {
@@ -405,6 +426,8 @@ formServerHelper <- function(input, output, session, formInfo) {
         return()
       }
     }
+    
+    print("Observes submit input")
     
     # Save the data (show an error message in case of error)
     tryCatch({
