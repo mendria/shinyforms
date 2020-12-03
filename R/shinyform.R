@@ -19,7 +19,8 @@ STORAGE_TYPES <- list(
   MONGO = "mongo",
   GOOGLE_SHEETS = "gsheets",
   DROPBOX = "dropbox",
-  AMAZON_S3 = "s3"
+  AMAZON_S3 = "s3",
+  POSTGRES = "postgres"
 )
 
 
@@ -62,7 +63,10 @@ saveData <- function(data, storage) {
     saveDataFlatfile(data, storage)
   } else if (storage$type == STORAGE_TYPES$GOOGLE_SHEETS) {
     saveDataGsheets(data, storage)
+  } else if (storage$type == STORAGE_TYPES$POSTGRES) {
+    saveDataPostgres(data, storage)
   }
+  
 }
 
 
@@ -102,7 +106,16 @@ saveDataFlatfile <- function(data, storage) {
             row.names = FALSE, quote = TRUE)
 }
 
-
+# Takes data from your shinyforms inputs and saves it to postgres
+# @param data Dataframe taken from input shiny object
+# @param storage A list with variable type defining users perferred type of storage and storage path
+saveDataPostgres <- function(data, storage) {
+con <- getdata::con_postgresql()
+data <- as.data.frame(data)
+table_name <- formInfo$storage$table_name
+DBI::dbWriteTable(con, table_name, data, append = TRUE, row.names = FALSE)
+DBI::dbDisconnect(con)
+}
 
 # Takes data from a flat file and passes it to your shiny app.
 # @param storage A list with variable type defining users perferred type of storage
@@ -460,10 +473,12 @@ formServerHelper <- function(input, output, session, formInfo) {
   # Gather all the form inputs (and add timestamp)
   formData <- reactive({
     data <- sapply(fieldsAll, function(x) input[[x]])
-    data <- c(data, timestamp = as.integer(Sys.time()))
+    data <- c(data, timestamp = lubridate::ymd_hms(Sys.time()))
     data <- t(data)
     data
+
   }) 
+  
   
   output$responsesTable <- DT::renderDataTable({
     if (!values$adminVerified) {
