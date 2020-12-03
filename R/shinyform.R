@@ -375,19 +375,19 @@ formServerHelper <- function(input, output, session, formInfo) {
   
 
   
-  fieldsMandatory <- Filter(function(x) {!is.null(x$mandatory) && x$mandatory }, questions)
-  fieldsMandatory <- unlist(lapply(fieldsMandatory, function(x) { x$id }))
-  fieldsAll <- unlist(lapply(questions, function(x) { x$id }))
+  # fieldsMandatory <- Filter(function(x) {!is.null(x$mandatory) && x$mandatory }, questions)
+  # fieldsMandatory <- unlist(lapply(fieldsMandatory, function(x) { x$id }))
+  # fieldsAll <- unlist(lapply(questions, function(x) { x$id }))
 
   
-  # fieldsMandatory <- reactive({
-  #   mandatory <- Filter(function(x) {!is.null(x$mandatory) && x$mandatory}, questions)
-  #   fieldsMandatory_l <- Filter(function(x) {is.null(x$condition) | as.name(str_replace(x$condition, "[.]", "$")) == TRUE}, mandatory)
-  #   fieldsMandatory_l
-  #   fieldsMandatory <- sapply(fieldsMandatory_l, function(x) { x$id })
-  #   fieldsMandatory
-  #   
-  # })
+  fieldsMandatory <- reactive({
+    mandatory <- Filter(function(x) {!is.null(x$mandatory) && x$mandatory}, questions)
+    fieldsMandatory_l <- Filter(function(x) {is.null(x$condition) | (!is.null(x$condition) && eval(parse(text = str_replace(x$condition, "[.]", "$"))))}, mandatory)   ##eval (str_replace(x$condition, "[.]", "$"))
+    fieldsMandatory_l
+    fieldsMandatory <- sapply(fieldsMandatory_l, function(x) { x$id })
+    fieldsMandatory
+
+  })
 
   print("makes mandatory fields")
 
@@ -411,7 +411,7 @@ formServerHelper <- function(input, output, session, formInfo) {
   
   observe({
     mandatoryFilled <-
-      vapply(fieldsMandatory,
+      vapply(fieldsMandatory(),
              function(x) {
                !is.null(input[[x]]) && input[[x]] != ""
              },
