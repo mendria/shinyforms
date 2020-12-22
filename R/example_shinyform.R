@@ -1,6 +1,8 @@
 if (interactive()) {
   library(shiny)
   library(shinyforms)
+  library(stringr)
+  library(dplyr)
 
   questions <- list(
     list(id = "name", type = "text", title = "Name", mandatory = TRUE),
@@ -8,16 +10,18 @@ if (interactive()) {
     list(id = "favourite_pkg", type = "text", title = "Favourite R package"),
     list(id = "terms", type = "checkbox", title = "I agree to the terms"),
     list(id = "naps", type = "select", title = "Do you like taking naps?", choices = c("",  "Yes", "No")),
-    list(id = "nap_location", type = "select", title = "Where do you nap?", choices = c("", "bed", "couch", "floor"), condition = "input.naps == 'Yes'", mandatory = TRUE)
+    list(id = "nap_location", type = "select", title = "Where do you nap?", choices = c("", "Bed", "Couch", "Floor", "Adam's Surface"), condition = "input.naps == 'Yes'", mandatory = TRUE)
   )
   formInfo <- list(
   id = "basicinfo",
   questions = questions,
   storage = list(
     # Right now, only flat file storage is supported
-    type = STORAGE_TYPES$FLATFILE,
+    type = STORAGE_TYPES$POSTGRES,
     # The path where responses are stored
-    path = "responses"
+    path = "responses",
+    # Name of postgres table to save the results in
+    table_name = 'shinyform_test_3'
   )
   )
   ui <- fluidPage(
