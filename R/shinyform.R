@@ -106,15 +106,29 @@ saveDataFlatfile <- function(data, storage) {
             row.names = FALSE, quote = TRUE)
 }
 
+
 # Takes data from your shinyforms inputs and saves it to postgres
 # @param data Dataframe taken from input shiny object
 # @param storage A list with variable type defining users perferred type of storage and storage path
 saveDataPostgres <- function(data, storage) {
-con <- getdata::con_postgresql()
-data <- as.data.frame(data)
-table_name <- formInfo$storage$table_name
-DBI::dbWriteTable(con, table_name, data, append = TRUE, row.names = FALSE)
-DBI::dbDisconnect(con)
+  con <- getdata::con_postgresql()
+  data <- as.list(as.data.frame(data, stringsAsFactors = FALSE))
+  
+# define data types in postgres db depending on input type  
+  
+  data <- purrr::map2(data, questions, function(x, y) if(y$type == "numeric") {
+    data[[as.character(y$id)]] <- as.numeric(data[[as.character(y$id)]])
+  } else if(y$type %in% c("text", "select", "checkbox")) 
+  {data[[as.character(y$id)]] <- as.character(data[[as.character(y$id)]])
+  })
+  
+  data <- as.data.frame(data)
+  data <- cbind(data, timestamp = as.POSIXct(Sys.time()), modified_by = Sys.info()[["user"]])
+  class(data$timestamp) <- "POSIXct"
+  data <- data %>% mutate_all(na_if,"")
+  table_name <- formInfo$storage$table_name
+  DBI::dbWriteTable(con, table_name, data, append = TRUE, row.names = FALSE)
+  DBI::dbDisconnect(con)
 }
 
 # Takes data from a flat file and passes it to your shiny app.
@@ -357,7 +371,7 @@ formServer <- function(formInfo) {
   callModule(formServerHelper, formInfo$id, formInfo)
 }
 
-
+ 
 # Helper function for formServer component
 formServerHelper <- function(input, output, session, formInfo) {
   if (grepl("\\s", formInfo$id)) {
@@ -473,7 +487,7 @@ formServerHelper <- function(input, output, session, formInfo) {
   # Gather all the form inputs (and add timestamp)
   formData <- reactive({
     data <- sapply(fieldsAll, function(x) input[[x]])
-    data <- c(data, timestamp = lubridate::ymd_hms(Sys.time()))
+    # data <- c(data, timestamp = as.POSIXct(Sys.time()))
     data <- t(data)
     data
 
