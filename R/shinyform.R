@@ -222,7 +222,13 @@ formUI <- function(formInfo) {
   fieldsMandatory <- unlist(lapply(fieldsMandatory, function(x) { x$id }))
   
   data <- loadDataPostgres()
-  prefill_data <- data %>% dplyr::filter(timestamp == max(timestamp))
+  
+  prefill_data <- if (!is.null(formInfo$prefill_filter)) {
+    data %>% dplyr::filter(eval(parse(text = formInfo$prefill_filter))) %>%
+      dplyr::filter(timestamp == max(timestamp))
+  } else {
+    data %>% dplyr::filter(timestamp == max(timestamp))
+  }
   
   titleElement <- NULL
   if (!is.null(formInfo$name)) {
@@ -263,14 +269,14 @@ formUI <- function(formInfo) {
             } else if (question$type == "checkbox" & is.null(question$prefill)) {
               input <- checkboxInput(ns(question$id), label, value = FALSE)
             } else if(question$type == "select" & is.null(question$prefill)) {
-              input <- selectInput(ns(question$id), label, choices = question$choices)
+              input <- selectInput(ns(question$id), label = NULL, choices = question$choices)
             } else if(question$type == "select" && question$prefill == TRUE) {
-              input <- selectInput(ns(question$id), label, choices = question$choices, selected = prefill_data[[as.character(question$id)]])
+              input <- selectInput(ns(question$id), label = NULL, choices = question$choices, selected = prefill_data[[as.character(question$id)]])
             }
 
             div(
               class = "sf-question",
-              if (question$type != "checkbox" && question$type != "select") {
+              if (question$type != "checkbox") {
                 tags$label(
                   `for` = ns(question$id),
                   class = "sf-input-label", 

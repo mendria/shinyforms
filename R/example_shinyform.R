@@ -26,7 +26,9 @@ if (interactive()) {
     table_name = 'shinyform_test_3'
   ),
   reset = TRUE,
-  password = 'shinyforms'
+  password = 'shinyforms',
+  # sets row filter for prefill option, if null, last entry is selected
+  prefill_filter = ".$name == 'Matilda'"
   )
   
   
