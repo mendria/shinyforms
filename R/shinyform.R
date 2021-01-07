@@ -80,6 +80,8 @@ loadData <- function(storage) {
     loadDataFlatfile(storage)
   } else if (storage$type == STORAGE_TYPES$GOOGLE_SHEETS) {
     #loadDataGsheets(storage)
+  } else if (storage$type == STORAGE_TYPES$POSTGRES) {
+    loadDataPostgres(storage)
   }
 }
 
@@ -130,6 +132,15 @@ saveDataPostgres <- function(data, storage) {
   DBI::dbWriteTable(con, table_name, data, append = TRUE, row.names = FALSE)
   DBI::dbDisconnect(con)
 }
+
+# Takes data from postgres and passes it to your shiny app.
+# @param storage A list with variable type defining users perferred type of storage
+loadDataPostgres <- function(storage) {
+  data <- DBI::dbReadTable(getdata::con_postgresql(), formInfo$storage$table_name)
+  
+  data
+}
+
 
 # Takes data from a flat file and passes it to your shiny app.
 # @param storage A list with variable type defining users perferred type of storage
@@ -210,6 +221,15 @@ formUI <- function(formInfo) {
   fieldsMandatory <- Filter(function(x) { !is.null(x$mandatory) && x$mandatory }, questions)
   fieldsMandatory <- unlist(lapply(fieldsMandatory, function(x) { x$id }))
   
+  data <- loadDataPostgres()
+  
+  prefill_data <- if (!is.null(formInfo$prefill_filter)) {
+    data %>% dplyr::filter(eval(parse(text = formInfo$prefill_filter))) %>%
+      dplyr::filter(timestamp == max(timestamp))
+  } else {
+    data %>% dplyr::filter(timestamp == max(timestamp))
+  }
+  
   titleElement <- NULL
   if (!is.null(formInfo$name)) {
     titleElement <- h2(formInfo$name)
@@ -232,24 +252,31 @@ formUI <- function(formInfo) {
         lapply(
           questions,
           function(question) {
+     
             label <- question$title
             if (question$id %in% fieldsMandatory) {
               label <- labelMandatory(label)
             }
             
-            if (question$type == "text") {
-              input <- textInput(ns(question$id), NULL, "")
-            } else if (question$type == "numeric") {
-              input <- numericInput(ns(question$id), NULL, 0)
-            } else if (question$type == "checkbox") {
-              input <- checkboxInput(ns(question$id), label, FALSE)
-            } else if(question$type == "select") {
-              input <- selectInput(ns(question$id), label, choices = question$choices)
+            if (question$type == "text" & is.null(question$prefill)) {
+              input <- textInput(ns(question$id), value = "", NULL)
+            } else if (question$type == "text" && question$prefill == TRUE) {
+              input <- textInput(ns(question$id), value = prefill_data[[as.character(question$id)]], NULL)
+            } else if (question$type == "numeric" & is.null(question$prefill)) {
+              input <- numericInput(ns(question$id), NULL , NULL)
+            } else if (question$type == "numeric" && question$prefill == TRUE) {
+              input <- numericInput(ns(question$id), value = prefill_data[[as.character(question$id)]], NULL)
+            } else if (question$type == "checkbox" & is.null(question$prefill)) {
+              input <- checkboxInput(ns(question$id), label, value = FALSE)
+            } else if(question$type == "select" & is.null(question$prefill)) {
+              input <- selectInput(ns(question$id), label = NULL, choices = question$choices)
+            } else if(question$type == "select" && question$prefill == TRUE) {
+              input <- selectInput(ns(question$id), label = NULL, choices = question$choices, selected = prefill_data[[as.character(question$id)]])
             }
 
             div(
               class = "sf-question",
-              if (question$type != "checkbox" && question$type != "select") {
+              if (question$type != "checkbox") {
                 tags$label(
                   `for` = ns(question$id),
                   class = "sf-input-label", 
@@ -385,6 +412,9 @@ formServerHelper <- function(input, output, session, formInfo) {
   }
   
   questions <- formInfo$questions
+  storage <- formInfo$storage
+  
+  
   
 ## This reactive makes sure that mandatory conditional fields are only mandatory if their condition is true
   
