@@ -3,15 +3,16 @@ if (interactive()) {
   library(shinyforms)
   library(stringr)
   library(dplyr)
+  library(shinyWidgets)
 
   questions <- list(
-    list(id = "name", type = "text", title = "Name", mandatory = TRUE, prefill = TRUE),
+    list(id = "name", type = "text", title = "Name", mandatory = TRUE, prefill = TRUE, info = "Enter your name. It's not that hard"),
     list(id = "age", type = "numeric", title = "Age", prefill = TRUE),
     list(id = "favourite_pkg", type = "text", title = "Favourite R package", prefill = TRUE),
     # currently no option for checkbox inputs to be prefilled
     list(id = "terms", type = "checkbox", title = "I agree to the terms"),
     list(id = "naps", type = "select", title = "Do you like taking naps?", choices = c("",  "Yes", "No"), prefill = TRUE),
-    list(id = "nap_location", type = "select", title = "Where do you nap?", choices = c("", "Bed", "Couch", "Floor", "Adam's Surface"), condition = "input.naps == 'Yes'", mandatory = TRUE, prefill = TRUE)
+    list(id = "nap_location", type = "select", title = "Where do you nap?", choices = c("", "Bed", "Couch", "Floor", "Adam's Surface"), condition = "input.naps == 'Yes'", mandatory = TRUE, prefill = TRUE, hint = "Hello")
   )
   formInfo <- list(
   id = "basicinfo",
