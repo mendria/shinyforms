@@ -272,6 +272,10 @@ formUI <- function(formInfo) {
               input <- selectInput(ns(question$id), label = NULL, choices = question$choices)
             } else if(question$type == "select" && question$prefill == TRUE) {
               input <- selectInput(ns(question$id), label = NULL, choices = question$choices, selected = prefill_data[[as.character(question$id)]])
+            } else if(question$type == "date" & is.null(question$prefill)) {
+              input <- dateInput(ns(question$id), label = NULL, value = NULL)
+            } else if(question$type == "date" && question$prefill == TRUE) {
+              input <- dateInput(ns(question$id), label = NULL, value = prefill_data[[as.character(question$id)]])
             }
 
             div(
