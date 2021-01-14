@@ -285,7 +285,7 @@ formUI <- function(formInfo) {
                     div(class = "question-hint", question$hint)
                   },
                   if (!is.null(question$info)) {
-                    div(style="display: inline-block;vertical-align:top; width: 25px;", actionLink(ns(input[[paste0(question$id, "info")]]),label = "", icon = icon("info-circle")))
+                    div(style="display: inline-block;vertical-align:top; width: 25px;", actionLink(ns(paste0(question$id, "info")),label = "", icon = icon("info-circle")))
                   }
                   # if (!is.null(question$info)) {
                   #   div(style="display: inline-block;vertical-align:top; width: 25px;", actionBttn(ns(input[[paste0(question$id, "info")]]), size = "xs", style = 'material-circle', icon = icon("info-circle")))
@@ -461,36 +461,38 @@ formServerHelper <- function(input, output, session, formInfo) {
   info_click <- reactive({
     
     info_click <- sapply(questions, function(x) {
-    if(!is.null(input[[paste0(x$id, "info")]])) {x$id}
+    if(!is.null(input[[paste0(x$id, "info")]]) && input[[paste0(x$id, "info")]] > 0) {x$id}
     })
-    
-    unlist(info_click)
+  
+    info_click <- unlist(info_click)
+ 
     
     })
 
+  
   # observeEvent(input$gen_comp_help, {
   #   sendSweetAlert(session, title = "General compliance", type = "info", text = "Answers to this question provide the data analysts with a broad measure of compliance for simple analyses.")
   # })
   
-   observeEvent(info_click(), { 
-    
+   observeEvent(info_click(), {
+
      info_list <- info_click()
-     
+
      purrr::map2(questions, info_list, function(x, y){
 
       if(x$id %in% y) {
-        
+
         showModal(
-        modalDialog( 
+        modalDialog(
           # modal options
           easyClose = TRUE,
-          title = "hello",
-          
+          title = x$info,
+
         )
       )}
       })
-     
-    
+
+
   }
   )
   
