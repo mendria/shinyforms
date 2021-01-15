@@ -465,8 +465,11 @@ formServerHelper <- function(input, output, session, formInfo) {
     })
   
     info_click <- unlist(info_click)
- 
     
+    # fill up the vector to the length of "questions" cause map2 can't handle vectors
+    # of differenet lengths, see next observeEvent
+    info_click <- append(info_click, rep(NA, length(questions) - length(info_click))) 
+
     })
 
   
@@ -482,14 +485,18 @@ formServerHelper <- function(input, output, session, formInfo) {
 
       if(x$id %in% y) {
 
-        showModal(
-        modalDialog(
-          # modal options
-          easyClose = TRUE,
-          title = x$info,
+        sendSweetAlert(session, title = x$title, type = "info", text = x$info)
+    
+        
+        # showModal(
+        # modalDialog(
+        #   # modal options
+        #   easyClose = TRUE,
+        #   title = x$info,
 
-        )
-      )}
+        # )
+     # )
+     }
       })
 
 
