@@ -283,9 +283,17 @@ formUI <- function(formInfo) {
                   label,
                   if (!is.null(question$hint)) {
                     div(class = "question-hint", question$hint)
+                  },
+                  if (!is.null(question$info)) {
+                    div(style="display: inline-block;vertical-align:top; width: 25px;", actionLink(ns(paste0(question$id, "info")),label = "", icon = icon("info-circle")))
                   }
+                  # if (!is.null(question$info)) {
+                  #   div(style="display: inline-block;vertical-align:top; width: 25px;", actionBttn(ns(input[[paste0(question$id, "info")]]), size = "xs", style = 'material-circle', icon = icon("info-circle")))
+                  # }
                 )
-              },
+              }
+              ,
+              
               
               if(!is.null(question$condition)) {
                 
@@ -301,6 +309,7 @@ formUI <- function(formInfo) {
           }
         )
       ),
+      textOutput(ns("lastBtnclicked")),
       actionButton(ns("submit"), "Submit", class = "btn-primary"),
       if (!is.null(formInfo$reset) && formInfo$reset) {
         actionButton(ns("reset"), "Reset")
@@ -449,6 +458,49 @@ formServerHelper <- function(input, output, session, formInfo) {
     shinyjs::hide("error")
   })
   
+  ## Info button reactivity ##
+  
+  rv <- reactiveValues(lastBtn = character()) ## saves the last info button clicked
+  
+  lapply(questions, function(x){
+    
+    observeEvent(input[[paste0(x$id, "info")]], {
+      
+      if(!is.null(input[[paste0(x$id, "info")]]) & input[[paste0(x$id, "info")]] > 0) {
+        rv$lastBtn = x$id
+        
+      }
+    })
+    
+  })
+  
+
+
+  info_click <- reactive({
+    
+    sapply(questions, function(x){
+      
+      input[[paste0(x$id, "info")]] })
+    
+  })
+  
+  observeEvent(info_click(), {
+
+    sapply(questions, function(x){
+
+      if(length(rv$lastBtn) != 0) {
+        
+        if(x$id == rv$lastBtn){
+
+        sendSweetAlert(session, title = x$title, type = "info", text = x$info)
+        
+          }
+
+      }
+    })
+  })
+      
+ 
   
   # When the Submit button is clicked, submit the response
   observeEvent(input$submit, {
