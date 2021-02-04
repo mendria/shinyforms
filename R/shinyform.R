@@ -309,6 +309,7 @@ formUI <- function(formInfo) {
           }
         )
       ),
+      textOutput(ns("lastBtnclicked")),
       actionButton(ns("submit"), "Submit", class = "btn-primary"),
       if (!is.null(formInfo$reset) && formInfo$reset) {
         actionButton(ns("reset"), "Reset")
@@ -457,54 +458,49 @@ formServerHelper <- function(input, output, session, formInfo) {
     shinyjs::hide("error")
   })
   
+  ## Info button reactivity ##
+  
+  rv <- reactiveValues(lastBtn = character()) ## saves the last info button clicked
+  
+  lapply(questions, function(x){
+    
+    observeEvent(input[[paste0(x$id, "info")]], {
+      
+      if(!is.null(input[[paste0(x$id, "info")]]) & input[[paste0(x$id, "info")]] > 0) {
+        rv$lastBtn = x$id
+        
+      }
+    })
+    
+  })
+  
+
 
   info_click <- reactive({
     
-    info_click <- sapply(questions, function(x) {
-    if(!is.null(input[[paste0(x$id, "info")]]) && input[[paste0(x$id, "info")]] > 0) {x$id}
-    })
-  
-    info_click <- unlist(info_click)
+    sapply(questions, function(x){
+      
+      input[[paste0(x$id, "info")]] })
     
-    # fill up the vector to the length of "questions" cause map2 can't handle vectors
-    # of differenet lengths, see next observeEvent
-    info_click <- append(info_click, rep(NA, length(questions) - length(info_click))) 
-
-    })
-
+  })
   
-  # observeEvent(input$gen_comp_help, {
-  #   sendSweetAlert(session, title = "General compliance", type = "info", text = "Answers to this question provide the data analysts with a broad measure of compliance for simple analyses.")
-  # })
-  
-   observeEvent(info_click(), {
+  observeEvent(info_click(), {
 
-     info_list <- info_click()
+    sapply(questions, function(x){
 
-     purrr::map2(questions, info_list, function(x, y){
-
-      if(x$id %in% y) {
+      if(length(rv$lastBtn) != 0) {
+        
+        if(x$id == rv$lastBtn){
 
         sendSweetAlert(session, title = x$title, type = "info", text = x$info)
-    
         
-        # showModal(
-        # modalDialog(
-        #   # modal options
-        #   easyClose = TRUE,
-        #   title = x$info,
+          }
 
-        # )
-     # )
-     }
-      })
-
-
-  }
-  )
-  
-
-  
+      }
+    })
+  })
+      
+ 
   
   # When the Submit button is clicked, submit the response
   observeEvent(input$submit, {
