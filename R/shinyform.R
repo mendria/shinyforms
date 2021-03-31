@@ -254,6 +254,21 @@ formUI <- function(formInfo) {
           function(question) {
      
             label <- question$title
+            
+            sf_input_label_div <- tags$label(
+              `for` = ns(question$id),
+              class = "sf-input-label", 
+              label,
+              if (!is.null(question$hint)) {
+                div(class = "question-hint", question$hint)
+              },
+              if (!is.null(question$info)) {
+                div(style="display: inline-block;vertical-align:top; width: 25px;", actionLink(ns(paste0(question$id, "info")),label = "", icon = icon("info-circle")))
+              }
+              
+            )
+              
+              
             if (question$id %in% fieldsMandatory) {
               label <- labelMandatory(label)
             }
@@ -277,20 +292,10 @@ formUI <- function(formInfo) {
             div(
               class = "sf-question",
               if (question$type != "checkbox") {
-                tags$label(
-                  `for` = ns(question$id),
-                  class = "sf-input-label", 
-                  label,
-                  if (!is.null(question$hint)) {
-                    div(class = "question-hint", question$hint)
-                  },
-                  if (!is.null(question$info)) {
-                    div(style="display: inline-block;vertical-align:top; width: 25px;", actionLink(ns(paste0(question$id, "info")),label = "", icon = icon("info-circle")))
-                  }
-                  # if (!is.null(question$info)) {
-                  #   div(style="display: inline-block;vertical-align:top; width: 25px;", actionBttn(ns(input[[paste0(question$id, "info")]]), size = "xs", style = 'material-circle', icon = icon("info-circle")))
-                  # }
-                )
+                if(is.null(question$condition)) {sf_input_label_div
+                  } else {conditionalPanel(condition = question$condition,
+                                            ns =ns,
+                                            sf_input_label_div) }
               }
               ,
               

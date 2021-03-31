@@ -13,7 +13,7 @@ if (interactive()) {
     # currently no option for checkbox inputs to be prefilled
     list(id = "terms", type = "checkbox", title = "I agree to the terms"),
     list(id = "naps", type = "select", title = "Do you like taking naps?", choices = c("",  "Yes", "No"), prefill = TRUE, info = "There is no shame in taking a nap."),
-    list(id = "nap_location", type = "select", title = "Where do you nap?", choices = c("", "Bed", "Couch", "Floor", "Adam's Surface"), condition = "input.naps == 'Yes'", mandatory = TRUE, prefill = TRUE)
+    list(id = "nap_location", type = "select", title = "Where do you nap?", choices = c("", "Bed", "Couch", "Floor", "Adam's Surface"), condition = "input.naps == 'Yes'", mandatory = TRUE, prefill = TRUE, info = "Blah")
   )
   formInfo <- list(
   id = "basicinfo",
