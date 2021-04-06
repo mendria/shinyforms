@@ -141,9 +141,12 @@ saveDataPostgres <- function(data, storage) {
 # Takes data from postgres and passes it to your shiny app.
 # @param storage A list with variable type defining users perferred type of storage
 loadDataPostgres <- function(storage) {
-  data <- DBI::dbReadTable(getdata::con_postgresql(), formInfo$storage$table_name)
   
+  if(DBI::dbExistsTable(getdata::con_postgresql(), formInfo$storage$table_name)){
+  
+  data <- DBI::dbReadTable(getdata::con_postgresql(), formInfo$storage$table_name)
   data
+  }
 }
 
 
@@ -228,12 +231,13 @@ formUI <- function(formInfo) {
   
   data <- loadDataPostgres()
   
+  if(!is.null(data)){
   prefill_data <- if (!is.null(formInfo$prefill_filter)) {
     data %>% dplyr::filter(eval(parse(text = formInfo$prefill_filter))) %>%
       dplyr::filter(timestamp == max(timestamp))
   } else {
     data %>% dplyr::filter(timestamp == max(timestamp))
-  }
+  }} else {prefill_data <- NULL}
   
   titleElement <- NULL
   if (!is.null(formInfo$name)) {
