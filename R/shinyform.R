@@ -115,19 +115,24 @@ saveDataFlatfile <- function(data, storage) {
 saveDataPostgres <- function(data, storage) {
   con <- getdata::con_postgresql()
   data <- as.list(as.data.frame(data, stringsAsFactors = FALSE))
-  
+  # browser()
 # define data types in postgres db depending on input type  
   
   data <- purrr::map2(data, questions, function(x, y) if(y$type == "numeric") {
     data[[as.character(y$id)]] <- as.numeric(data[[as.character(y$id)]])
   } else if(y$type %in% c("text", "select", "checkbox")) 
   {data[[as.character(y$id)]] <- as.character(data[[as.character(y$id)]])
-  })
+  }
+  else if(y$type == "date"){
+    data[[as.character(y$id)]] <- as.Date(as.numeric(data[[as.character(y$id)]]), origin = "1970-01-01")}
+  )
+  
+ 
   
   data <- as.data.frame(data)
   data <- cbind(data, timestamp = as.POSIXct(Sys.time()), modified_by = Sys.info()[["user"]])
-  class(data$timestamp) <- "POSIXct"
-  data <- data %>% mutate_all(na_if,"")
+  # data <- data %>% mutate_all(., ~ na_if(., ""))
+  #data[] <- lapply(data, function(x) as(NA,class(x)))
   table_name <- formInfo$storage$table_name
   DBI::dbWriteTable(con, table_name, data, append = TRUE, row.names = FALSE)
   DBI::dbDisconnect(con)
@@ -255,6 +260,10 @@ formUI <- function(formInfo) {
      
             label <- question$title
             
+            if (question$id %in% fieldsMandatory) {
+              label <- labelMandatory(label)
+            }
+            
             sf_input_label_div <- tags$label(
               `for` = ns(question$id),
               class = "sf-input-label", 
@@ -269,9 +278,7 @@ formUI <- function(formInfo) {
             )
               
               
-            if (question$id %in% fieldsMandatory) {
-              label <- labelMandatory(label)
-            }
+            
             
             if (question$type == "text" & is.null(question$prefill)) {
               input <- textInput(ns(question$id), value = "", NULL)
@@ -287,6 +294,10 @@ formUI <- function(formInfo) {
               input <- selectInput(ns(question$id), label = NULL, choices = question$choices)
             } else if(question$type == "select" && question$prefill == TRUE) {
               input <- selectInput(ns(question$id), label = NULL, choices = question$choices, selected = prefill_data[[as.character(question$id)]])
+            } else if(question$type == "date" & is.null(question$prefill)) {
+              input <- dateInput(ns(question$id), label = NULL)
+            } else if(question$type == "date" && question$prefill == TRUE) {
+              input <- dateInput(ns(question$id), label = NULL, value = prefill_data[[as.character(question$id)]])
             }
 
             div(
@@ -509,7 +520,6 @@ formServerHelper <- function(input, output, session, formInfo) {
   
   # When the Submit button is clicked, submit the response
   observeEvent(input$submit, {
-
     # User-experience stuff
     shinyjs::disable("submit")
     shinyjs::show("submit_msg")
