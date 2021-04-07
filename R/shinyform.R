@@ -135,7 +135,7 @@ saveDataPostgres <- function(data, storage) {
   #data[] <- lapply(data, function(x) as(NA,class(x)))
   table_name <- formInfo$storage$table_name
   
-  diff <- setdiff(DBI::dbListFields(con, table_name), names(data))
+  diff <- setdiff(names(data), DBI::dbListFields(con, table_name))
   
   if(!rlang::is_empty(diff)){
     
@@ -146,7 +146,7 @@ saveDataPostgres <- function(data, storage) {
       unlist(recursive = FALSE, use.names = FALSE)
     
     
-    sql_classes <- str_replace_all(class_string,c("character" = "text", "POSIXct; POSIXt" = "date", "numeric" = "int4"))
+    sql_classes <- str_replace_all(class_string,c("character" = "text", "factor" = "text", "POSIXct; POSIXt" = "date", "numeric" = "int4"))
     
     
     column_string <- purrr::map2(diff, sql_classes, function(x,y){
@@ -154,8 +154,10 @@ saveDataPostgres <- function(data, storage) {
     }) %>% paste(collapse = ', ')
     
     query <- glue::glue("ALTER TABLE {table_name} ", column_string, ";")
+
     
     DBI::dbSendQuery(con, query)
+    DBI::dbWriteTable(con, table_name, data, append = TRUE, row.names = FALSE)
     
   } else {DBI::dbWriteTable(con, table_name, data, append = TRUE, row.names = FALSE)}
   
