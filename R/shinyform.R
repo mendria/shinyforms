@@ -328,6 +328,10 @@ formUI <- function(formInfo) {
               input <- dateInput(ns(question$id), label = NULL)
             } else if(question$type == "date" && question$prefill == TRUE) {
               input <- dateInput(ns(question$id), label = NULL, value = prefill_data[[as.character(question$id)]])
+            } else if(question$type == "checkbox_group" & is.null(question$prefill)) {
+              input <- checkboxGroupInput((ns(question$id)), label = NULL, choices = question$choices)
+            } else if(question$type == "checkbox_group" && question$prefill == TRUE) {
+              input <- checkboxGroupInput(ns(question$id), label = NULL, choices = question$choices, selected = prefill_data[[as.character(question$id)]])
             }
 
             div(
@@ -482,6 +486,7 @@ formServerHelper <- function(input, output, session, formInfo) {
   })
 
   fieldsAll <- unlist(lapply(questions, function(x) { x$id }))
+  inputTypeAll <- unlist(lapply(questions, function(x) {x$type}))
   
   print("Creates reactive vector of mandatory fields")
  
@@ -613,13 +618,19 @@ formServerHelper <- function(input, output, session, formInfo) {
   
   # Gather all the form inputs (and add timestamp)
   formData <- reactive({
-    data <- sapply(fieldsAll, function(x) input[[x]])
+    
+    data <- purrr::map2(inputTypeAll, fieldsAll, function(x, y){ 
+      
+      if(x == "checkbox_group"){as.character(paste(input[[y]], collapse = ';'))
+      } else {input[[y]]}
+    })
     # data <- c(data, timestamp = as.POSIXct(Sys.time()))
     data <- t(data)
     data
-
+    browser()
   }) 
   
+ 
   
   output$responsesTable <- DT::renderDataTable({
     if (!values$adminVerified) {
