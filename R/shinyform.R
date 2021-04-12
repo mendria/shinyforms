@@ -117,7 +117,7 @@ saveDataPostgres <- function(data, storage) {
   data <- as.list(as.data.frame(data, stringsAsFactors = FALSE))
   # browser()
 # define data types in postgres db depending on input type  
-  
+  View(data)
   data <- purrr::map2(data, questions, function(x, y) if(y$type == "numeric") {
     data[[as.character(y$id)]] <- as.numeric(data[[as.character(y$id)]])
   } else if(y$type %in% c("text", "select", "checkbox")) 
@@ -130,7 +130,10 @@ saveDataPostgres <- function(data, storage) {
  
   
   data <- as.data.frame(data)
+  
   data <- cbind(data, timestamp = as.POSIXct(Sys.time()), modified_by = Sys.info()[["user"]])
+  
+  
   # data <- data %>% mutate_all(., ~ na_if(., ""))
   #data[] <- lapply(data, function(x) as(NA,class(x)))
   table_name <- formInfo$storage$table_name
@@ -627,7 +630,7 @@ formServerHelper <- function(input, output, session, formInfo) {
     # data <- c(data, timestamp = as.POSIXct(Sys.time()))
     data <- t(data)
     data
-    browser()
+    
   }) 
   
  
