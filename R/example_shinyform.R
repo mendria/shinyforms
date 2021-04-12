@@ -7,6 +7,7 @@ if (interactive()) {
 
 
   questions <- list(
+    list(id = "date", type = "date", title = "Date of birth"),
     list(id = "name", type = "text", title = "Name", mandatory = TRUE, prefill = TRUE, info = "Please enter your name."),
     list(id = "age", type = "numeric", title = "Age", mandatory = TRUE),
     list(id = "favourite_pkg", type = "text", title = "Favourite R package", prefill = TRUE, hint = "Don't spend too much time thinking about this question."),
@@ -25,7 +26,7 @@ if (interactive()) {
     # The path where responses are stored
     path = "responses",
     # Name of postgres table to save the results in
-    table_name = 'shinyform_test_3'
+    table_name = 'shinyform'
   ),
   reset = TRUE,
   password = 'shinyforms',
