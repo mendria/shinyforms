@@ -17,8 +17,8 @@ if (interactive()) {
     list(id = "gut_feel", type = "select", title = "Do you think the duty holder will comply in the longterm?", choices = c("Yes", "No")),
     list(id = "stkp_location", type = "text", title = paste("Where was located?")),
     list(id = "frv_observations", type = "text", title = "FRV observations")
-    # ,
-    # list(id = "buildings", type = "checkbox_group", title = "Please select storage building numbers", choices = c(1, 2, 3, 4))
+    ,
+    list(id = "buildings", type = "checkbox_group", title = "Please select storage building numbers", choices = c(1, 2, 3, 4))
   )
   formInfo <- list(
     id = "basicinfo",

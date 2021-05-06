@@ -58,13 +58,13 @@ appCSS <- "
 # Takes data from your shinyforms inputs and passes it to a storage type.
 # @param data Dataframe taken from input shiny object.
 # @param storage A list with variable type defining users perferred type of storage
-saveData <- function(data, storage) {
+saveData <- function(formdata, storage) {
   if (storage$type == STORAGE_TYPES$FLATFILE) {
-    saveDataFlatfile(data, storage)
+    saveDataFlatfile(formdata, storage)
   } else if (storage$type == STORAGE_TYPES$GOOGLE_SHEETS) {
-    saveDataGsheets(data, storage)
+    saveDataGsheets(formdata, storage)
   } else if (storage$type == STORAGE_TYPES$POSTGRES) {
-    saveDataPostgres(data, storage)
+    saveDataPostgres(formdata, storage)
   }
   
 }
@@ -91,11 +91,11 @@ loadData <- function(storage) {
 # Writes form inputs to a storage type and names it using a timestamp.
 # @param data Dataframe taken from input shiny object
 # @param storage A list with variable type defining users perferred type of storage and storage path
-saveDataFlatfile <- function(data, storage) {
+saveDataFlatfile <- function(formdata, storage) {
   fileName <- paste0(
     paste(
       format(Sys.time(), "%Y%m%d-%H%M%OS"),
-      digest::digest(data, algo = "md5"),
+      digest::digest(formdata, algo = "md5"),
       sep = "_"
     ),
     ".csv"
@@ -104,7 +104,7 @@ saveDataFlatfile <- function(data, storage) {
   resultsDir <- storage$path
   
   # write out the results
-  write.csv(x = data, file = file.path(resultsDir, fileName),
+  write.csv(x = formdata, file = file.path(resultsDir, fileName),
             row.names = FALSE, quote = TRUE)
 }
 
@@ -112,38 +112,42 @@ saveDataFlatfile <- function(data, storage) {
 # Takes data from your shinyforms inputs and saves it to postgres
 # @param data Dataframe taken from input shiny object
 # @param storage A list with variable type defining users perferred type of storage and storage path
-saveDataPostgres <- function(data, storage) {
+saveDataPostgres <- function(formdata, storage) {
+  
+  
+  
   con <- getdata::con_postgresql()
-  data <- as.list(as.data.frame(data, stringsAsFactors = FALSE))
+  # data <- as.list(as.data.frame(formdata, stringsAsFactors = FALSE))
   # browser()
 # define data types in postgres db depending on input type  
-  View(data)
-  data <- purrr::map2(data, questions, function(x, y) if(y$type == "numeric") {
-    data[[as.character(y$id)]] <- as.numeric(data[[as.character(y$id)]])
-  } else if(y$type %in% c("text", "select", "checkbox")) 
-  {data[[as.character(y$id)]] <- as.character(data[[as.character(y$id)]])
-  }
-  else if(y$type == "date"){
-    data[[as.character(y$id)]] <- as.Date(as.numeric(data[[as.character(y$id)]]), origin = "1970-01-01")}
-  )
-  
+ 
  
   
-  data <- as.data.frame(data)
+  formdata_formatted <- purrr::map2(formdata, questions, function(x, y) if(y$type == "numeric") {
+    x[[as.character(y$id)]] <- as.numeric(x[[as.character(y$id)]])
+  } else if(y$type == "date"){
+    x[[as.character(y$id)]] <- lubridate::as_date(as.numeric(x[[as.character(y$id)]]))
+  } else {x[[as.character(y$id)]] <- as.character(x[[as.character(y$id)]])
+    }
+  )
   
-  data <- cbind(data, timestamp = as.POSIXct(Sys.time()), modified_by = Sys.info()[["user"]])
+  
+  formdata_df <- as.data.frame(formdata_formatted)
+  
+  
+  formdata_ts_df <- cbind(formdata_df, timestamp = as.POSIXct(Sys.time()), modified_by = Sys.info()[["user"]])
   
   
   # data <- data %>% mutate_all(., ~ na_if(., ""))
   #data[] <- lapply(data, function(x) as(NA,class(x)))
   table_name <- formInfo$storage$table_name
   
-  diff <- setdiff(names(data), DBI::dbListFields(con, table_name))
+  diff <- setdiff(names(formdata_ts_df), DBI::dbListFields(con, table_name))
   
   if(!rlang::is_empty(diff)){
     
     class_string <- sapply(diff, function(x){
-      class(data[[x]]) %>% 
+      class(formdata_ts_df[[x]]) %>% 
         paste(collapse = '; ')
     }) %>%
       unlist(recursive = FALSE, use.names = FALSE)
@@ -160,9 +164,9 @@ saveDataPostgres <- function(data, storage) {
 
     
     DBI::dbSendQuery(con, query)
-    DBI::dbWriteTable(con, table_name, data, append = TRUE, row.names = FALSE)
+    DBI::dbWriteTable(con, table_name, formdata_ts_df, append = TRUE, row.names = FALSE)
     
-  } else {DBI::dbWriteTable(con, table_name, data, append = TRUE, row.names = FALSE)}
+  } else {DBI::dbWriteTable(con, table_name, formdata_ts_df, append = TRUE, row.names = FALSE)}
   
   DBI::dbDisconnect(con)
 }
@@ -195,8 +199,8 @@ loadDataFlatfile <- function(storage) {
 # Takes data from your shinyforms inputs and saves it to a google doc file
 # @param data Dataframe taken from input shiny object
 # @param storage A list with variable type defining users perferred type of storage and storage key
-saveDataGsheets <- function(data, storage) {
-  gs_add_row(gs_key(storage$key), input = data)
+saveDataGsheets <- function(formdata, storage) {
+  gs_add_row(gs_key(storage$key), input = formdata)
 }
 
 
@@ -258,7 +262,23 @@ formUI <- function(formInfo) {
   fieldsMandatory <- Filter(function(x) { !is.null(x$mandatory) && x$mandatory }, questions)
   fieldsMandatory <- unlist(lapply(fieldsMandatory, function(x) { x$id }))
   
+  
+  
+  
   data <- loadDataPostgres()
+  
+  tempdata <- tryCatch({tempdata <- read.csv(file.path(tempdir(), "formdata")) %>% select(-X)}, 
+           error = function(e) {return(NULL)})
+  
+  if(!is.null(tempdata)){prefill_data <- tempdata}
+  else if(!is.null(data)){
+    prefill_data <- if (!is.null(formInfo$prefill_filter)) {
+      data %>% dplyr::filter(eval(parse(text = formInfo$prefill_filter))) %>%
+        dplyr::filter(timestamp == max(timestamp))
+    } else {
+      data %>% dplyr::filter(timestamp == max(timestamp))
+    }} else {prefill_data <- NULL}
+  
   
   if(!is.null(data)){
   prefill_data <- if (!is.null(formInfo$prefill_filter)) {
@@ -619,21 +639,26 @@ formServerHelper <- function(input, output, session, formInfo) {
     shinyjs::hide("thankyou_msg")
   })
   
-  # Gather all the form inputs (and add timestamp)
+  # Gather all the form inputs
   formData <- reactive({
     
-    data <- purrr::map2(inputTypeAll, fieldsAll, function(x, y){ 
+    formdata <- mapply(function(x, y){ 
       
-      if(x == "checkbox_group"){as.character(paste(input[[y]], collapse = ';'))
-      } else {input[[y]]}
-    })
+      if(y == "checkbox_group"){as.character(paste(input[[x]], collapse = ';'))
+      } else {input[[x]]}
+    },fieldsAll, inputTypeAll)
     # data <- c(data, timestamp = as.POSIXct(Sys.time()))
-    data <- t(data)
-    data
+    formdata <- t(formdata)
+    formdata <- as.data.frame(formdata)
+    formdata
     
   }) 
   
- 
+ observe({ 
+   fileName <- file.path(tempdir(), "formdata")
+   write.csv(formData(), file = fileName)
+   
+         })
   
   output$responsesTable <- DT::renderDataTable({
     if (!values$adminVerified) {
