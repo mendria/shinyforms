@@ -267,11 +267,11 @@ formUI <- function(formInfo) {
   
   data <- loadDataPostgres()
   
-  tempdata <- tryCatch({tempdata <- read.csv(file.path(tempdir(), "formdata")) %>% select(-X)}, 
+  tempdata <- tryCatch({tempdata <- read.csv(file.path(tempdir(), "formdata.csv")) %>% select(-X)}, 
            error = function(e) {return(NULL)})
+
   
-  if(!is.null(tempdata)){prefill_data <- tempdata}
-  else if(!is.null(data)){
+  if(!is.null(data)){
     prefill_data <- if (!is.null(formInfo$prefill_filter)) {
       data %>% dplyr::filter(eval(parse(text = formInfo$prefill_filter))) %>%
         dplyr::filter(timestamp == max(timestamp))
@@ -280,13 +280,13 @@ formUI <- function(formInfo) {
     }} else {prefill_data <- NULL}
   
   
-  if(!is.null(data)){
-  prefill_data <- if (!is.null(formInfo$prefill_filter)) {
-    data %>% dplyr::filter(eval(parse(text = formInfo$prefill_filter))) %>%
-      dplyr::filter(timestamp == max(timestamp))
-  } else {
-    data %>% dplyr::filter(timestamp == max(timestamp))
-  }} else {prefill_data <- NULL}
+  # if(!is.null(data)){
+  # prefill_data <- if (!is.null(formInfo$prefill_filter)) {
+  #   data %>% dplyr::filter(eval(parse(text = formInfo$prefill_filter))) %>%
+  #     dplyr::filter(timestamp == max(timestamp))
+  # } else {
+  #   data %>% dplyr::filter(timestamp == max(timestamp))
+  # }} else {prefill_data <- NULL}
   
   titleElement <- NULL
   if (!is.null(formInfo$name)) {
@@ -332,25 +332,34 @@ formUI <- function(formInfo) {
               
               
             
-            
-            if (question$type == "text" & is.null(question$prefill)) {
+            if(question$type == "text" && !is.null(tempdata)){
+              input <- textInput(ns(question$id), value = tempdata[[as.character(question$id)]], NULL)
+            } else if (question$type == "text" & is.null(question$prefill)) {
               input <- textInput(ns(question$id), value = "", NULL)
             } else if (question$type == "text" && question$prefill == TRUE) {
               input <- textInput(ns(question$id), value = prefill_data[[as.character(question$id)]], NULL)
+            } else if (question$type == "numeric" && !is.null(tempdata)) {
+              input <- numericInput(ns(question$id), value = tempdata[[as.character(question$id)]], NULL)
             } else if (question$type == "numeric" & is.null(question$prefill)) {
               input <- numericInput(ns(question$id), NULL , NULL)
             } else if (question$type == "numeric" && question$prefill == TRUE) {
               input <- numericInput(ns(question$id), value = prefill_data[[as.character(question$id)]], NULL)
             } else if (question$type == "checkbox" & is.null(question$prefill)) {
               input <- checkboxInput(ns(question$id), label, value = FALSE)
+            } else if(question$type == "select" && !is.null(tempdata)) {
+              input <- selectInput(ns(question$id), label = NULL, choices = question$choices, selected = tempdata[[as.character(question$id)]])
             } else if(question$type == "select" & is.null(question$prefill)) {
               input <- selectInput(ns(question$id), label = NULL, choices = question$choices)
             } else if(question$type == "select" && question$prefill == TRUE) {
               input <- selectInput(ns(question$id), label = NULL, choices = question$choices, selected = prefill_data[[as.character(question$id)]])
+            } else if(question$type == "date" && !is.null(tempdata)) {
+              input <- dateInput(ns(question$id), label = NULL, value = tempdata[[as.character(question$id)]])
             } else if(question$type == "date" & is.null(question$prefill)) {
               input <- dateInput(ns(question$id), label = NULL)
             } else if(question$type == "date" && question$prefill == TRUE) {
               input <- dateInput(ns(question$id), label = NULL, value = prefill_data[[as.character(question$id)]])
+            } else if(question$type == "checkbox_group" && !is.null(tempdata)) {
+              input <- checkboxGroupInput(ns(question$id), label = NULL, choices = question$choices, selected = tempdata[[as.character(question$id)]])
             } else if(question$type == "checkbox_group" & is.null(question$prefill)) {
               input <- checkboxGroupInput((ns(question$id)), label = NULL, choices = question$choices)
             } else if(question$type == "checkbox_group" && question$prefill == TRUE) {
@@ -512,6 +521,7 @@ formServerHelper <- function(input, output, session, formInfo) {
   inputTypeAll <- unlist(lapply(questions, function(x) {x$type}))
   
   print("Creates reactive vector of mandatory fields")
+  
  
   observe({
     mandatoryFilled <-
@@ -574,7 +584,29 @@ formServerHelper <- function(input, output, session, formInfo) {
     })
   })
       
- 
+  
+  # if(!is.null(tempdata)){prefill_data <- tempdata}
+  # else if(!is.null(data)){
+  #   prefill_data <- if (!is.null(formInfo$prefill_filter)) {
+  #     
+  #     sapply(questions, function(x){
+  #       prefill_data <- data %>% dplyr::filter(eval(parse(text = formInfo$prefill_filter))) %>%
+  #         dplyr::filter(timestamp == max(timestamp)) %>% 
+  #         mutate(x$id = ifelse(is.null(x$prefill, NA, as.character(x$id))))
+  #       
+  #       
+  #     }
+  #     )
+  #   } else {
+  #     sapply(questions, function(x){
+  #       prefill_data <- data %>% dplyr::filter(timestamp == max(timestamp))%>% 
+  #         mutate(x$id = ifelse(is.null(x$prefill, NA, as.character(x$id))))
+  #       
+  #     }
+  #     )
+  #   }} else {prefill_data <- NULL}
+  # 
+  # print(prefill_data)
   
   # When the Submit button is clicked, submit the response
   observeEvent(input$submit, {
@@ -586,6 +618,8 @@ formServerHelper <- function(input, output, session, formInfo) {
       shinyjs::enable("submit")
       shinyjs::hide("submit_msg")
     })
+    
+    
 
     if (!is.null(formInfo$validations)) {
       errors <- unlist(lapply(
@@ -617,12 +651,16 @@ formServerHelper <- function(input, output, session, formInfo) {
       shinyjs::reset("form")
       shinyjs::hide("form")
       shinyjs::show("thankyou_msg")
+      file.remove(file.path(tempdir(), "formdata.csv"))
+      
     },
     error = function(err) {
       shinyjs::logjs(err)
       shinyjs::html("error_msg", err$message)
       shinyjs::show(id = "error", anim = TRUE, animType = "fade")
     })
+    
+    
   })
   
   if (!is.null(formInfo$multiple) && !formInfo$multiple) {
@@ -654,10 +692,10 @@ formServerHelper <- function(input, output, session, formInfo) {
     
   }) 
   
- observe({ 
-   fileName <- file.path(tempdir(), "formdata")
+ observe({
+   fileName <- file.path(tempdir(), "formdata.csv")
    write.csv(formData(), file = fileName)
-   
+
          })
   
   output$responsesTable <- DT::renderDataTable({
